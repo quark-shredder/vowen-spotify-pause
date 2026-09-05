@@ -56,7 +56,14 @@ func spotifyEvent(_ eventClass: String, _ eventID: String) -> NSAppleEventDescri
 
 func send(_ event: NSAppleEventDescriptor) -> NSAppleEventDescriptor? {
     do {
-        return try event.sendEvent(options: [.waitForReply, .neverInteract], timeout: 2)
+        let reply = try event.sendEvent(options: [.waitForReply, .neverInteract], timeout: 2)
+        // Transport succeeded, but the app may still have refused the event.
+        if let errorNumber = reply.paramDescriptor(forKeyword: keyErrorNumber)?.int32Value, errorNumber != 0 {
+            let message = reply.paramDescriptor(forKeyword: keyErrorString)?.stringValue ?? ""
+            log("Spotify refused event: error \(errorNumber) \(message)")
+            return nil
+        }
+        return reply
     } catch {
         log("Apple Event failed: \(error.localizedDescription)")
         return nil
@@ -80,6 +87,10 @@ func spotifyIsPlaying() -> Bool? {
 func spotifyPause() -> Bool { spotifyEvent("spfy", "Paus").flatMap(send) != nil }
 func spotifyPlay()  -> Bool { spotifyEvent("spfy", "Play").flatMap(send) != nil }
 
+if let verb = ["--play": spotifyPlay, "--pause": spotifyPause].first(where: { CommandLine.arguments.contains($0.key) }) {
+    print(verb.key, verb.value() ? "accepted" : "FAILED")
+    exit(0)
+}
 if CommandLine.arguments.contains("--check") {
     let started = Date()
     let playing = spotifyIsPlaying()
@@ -182,6 +193,12 @@ func resumeIfWePaused(_ reason: String) {
     pausedByUs = false
     _ = spotifyPlay()
     log(reason)
+    // Seen once: Spotify acknowledged play yet stayed paused. Check back and retry a single time.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        guard !micRunning, !pausedByUs, spotifyIsPlaying() == false else { return }
+        log(spotifyPlay() ? "Spotify still paused 500 ms after resume, sent play again"
+                          : "Spotify still paused after resume, retry refused")
+    }
 }
 
 func micEdge(_ running: Bool) {
