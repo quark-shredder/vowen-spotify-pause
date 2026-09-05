@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>local.vowen-spotify-pause</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>@HOME@/.local/bin/vowen-spotify-pause</string>
+    </array>
+    <!-- Vowen rewrites cli/server.json on every launch; that write starts us. -->
+    <key>WatchPaths</key>
+    <array>
+        <string>@HOME@/Library/Application Support/Vowen/cli</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>@HOME@/Library/Logs/vowen-spotify-pause.log</string>
+    <key>StandardErrorPath</key>
+    <string>@HOME@/Library/Logs/vowen-spotify-pause.log</string>
+</dict>
+</plist>
